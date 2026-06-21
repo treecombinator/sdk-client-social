@@ -1,0 +1,22 @@
+{
+  "name": "@treecombinator/sdk-client-social",
+  "version": "0.0.1",
+  "license": "Apache-2.0",
+  "description": "Tree Combinator SDK — client social-login domain (run a provider flow, exchange the credential for a session at the BFF, persist the token).",
+  "type": "module",
+  "files": ["dist", "AGENTS.md", "README.md", "LICENSE"],
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": { "types": "./dist/index.d.ts", "default": "./dist/index.js" },
+      "require": { "types": "./dist/index.d.cts", "default": "./dist/index.cjs" }
+    }
+  },
+  "scripts": { "build": "tsup", "prepare": "tsup", "typecheck": "tsc --noEmit", "clean": "rm -rf dist" },
+  "dependencies": { "@treecombinator/sdk-common": "github:treecombinator/sdk-common" },
+  "devDependencies": { "tsup": "^8.5.1", "typescript": "^5.5.0" },
+  "repository": { "type": "git", "url": "git+https://github.com/treecombinator/sdk-client-social.git" },
+  "publishConfig": { "access": "public" }
+}
