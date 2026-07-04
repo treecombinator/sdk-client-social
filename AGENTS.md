@@ -18,12 +18,16 @@ const social = createSocialClient({
 const session = await social.login("google");
 ```
 
-`createSocialClient({ http, setToken, authorizers })` → `login(provider)`. Also exports
-`Session`, `SocialProvider`, `SocialLoginInput`, `SocialAuthorizer`, `SocialCredential`, `SocialClient`.
+`createSocialClient({ http, setToken, authorizers, routes? })` → `login<T extends { token: string } = Session>(provider)`. Also exports
+`Session`, `SocialProvider`, `SocialLoginInput`, `SocialAuthorizer`, `SocialCredential`, `SocialClient`,
+`SocialClientConfig`, `SocialHttp`.
 
 ## Notes
 
 - The auth wire shapes (`Session`, `SocialProvider`, `SocialLoginInput`) and the BFF social route are declared LOCALLY — this package consumes them, it does not share a contract package.
+- Canonical route is one `/auth/social` for all providers (the `provider` field disambiguates); `routes: { google: "/auth/google", ... }` overrides the path per provider — `provider` is still sent either way.
+- `login` is generic for BFFs returning richer shapes (e.g. `{ token, user }`); a response without a top-level string `token` throws.
+- `SocialLoginInput.name` is an optional profile hint the device may forward (Apple reveals the user's name to the client once, on first authorization — never in the id_token) for the BFF to use when creating the account.
 - `http` (an object with `post<T>(path, body)`) and `setToken(token)` are injected via inline shapes — no dependency on any transport or auth package.
-- Errors are `TcError` (from `@treecombinator/sdk-common`) with a specific code: `social_provider_unconfigured`.
+- Errors are `TcError` (from `@treecombinator/sdk-common`) with a specific code: `social_provider_unconfigured`, `social_session_invalid`.
 - Authorizers are injected, so this package never depends on expo-auth-session / expo-apple-authentication.

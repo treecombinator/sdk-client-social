@@ -1,7 +1,7 @@
 import { TcError } from "@treecombinator/sdk-common";
 import type { Session, SocialAuthorizer, SocialClient, SocialProvider } from "./port";
 
-/** The BFF route this domain exchanges a social credential against. */
+/** The default BFF route this domain exchanges a social credential against. */
 const SOCIAL_ROUTE = "/auth/social";
 
 /**
@@ -31,6 +31,17 @@ export interface SocialHttp {
  * });
  * const session = await social.login("google");
  * ```
+ *
+ * The canonical BFF takes every provider on one route (`/auth/social`, the `provider` field
+ * disambiguates). A BFF with one route per provider overrides per app:
+ *
+ * ```ts
+ * const social = createSocialClient({
+ *   ...,
+ *   routes: { google: "/auth/google", apple: "/auth/apple" },
+ * });
+ * ```
+ * The `provider` field is still sent — a per-provider route can simply ignore it.
  */
 export interface SocialClientConfig {
   http: SocialHttp;
@@ -38,18 +49,24 @@ export interface SocialClientConfig {
   setToken: (token: string) => void | Promise<void>;
   /** One authorizer per provider the app offers. A provider with no authorizer can't be used. */
   authorizers: Partial<Record<SocialProvider, SocialAuthorizer>>;
+  /** Per-provider path overrides; a provider absent here uses the canonical single route. */
+  routes?: Partial<Record<SocialProvider, string>>;
 }
 
 export function createSocialClient(config: SocialClientConfig): SocialClient {
   const { http, setToken, authorizers } = config;
   return {
-    async login(provider) {
+    async login<T extends { token: string } = Session>(provider: SocialProvider) {
       const authorize = authorizers[provider];
       if (!authorize) {
         throw new TcError("social_provider_unconfigured", `no authorizer configured for "${provider}"`);
       }
       const credential = await authorize();
-      const session = await http.post<Session>(SOCIAL_ROUTE, { provider, ...credential });
+      const route = config.routes?.[provider] ?? SOCIAL_ROUTE;
+      const session = await http.post<T>(route, { ...credential, provider });
+      if (typeof session?.token !== "string" || !session.token) {
+        throw new TcError("social_session_invalid", "BFF response carries no session token");
+      }
       await setToken(session.token);
       return session;
     },

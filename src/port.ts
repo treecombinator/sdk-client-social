@@ -4,7 +4,12 @@
  * never has to import a contract package or couple to the auth client.
  */
 
-/** A session the BFF returns after a successful social exchange. */
+/**
+ * A session the BFF returns after a successful social exchange — the default shape;
+ * `login` is generic at the call site for BFFs that return something richer (e.g.
+ * `{ token, user }`). Whatever the shape, a top-level string `token` is required: it is
+ * what gets persisted.
+ */
 export interface Session {
   /** Signed JWT to put in `Authorization: Bearer`. */
   token: string;
@@ -20,8 +25,8 @@ export type SocialProvider = "google" | "apple";
  * both verified server-side (the client_secret never leaves the BFF):
  *  - `code` (+ `codeVerifier`, `redirectUri`): OAuth authorization code from a browser/PKCE
  *    flow — typically Google via expo-auth-session.
- *  - `idToken` (+ `nonce`): an OpenID id_token from a native flow — typically Apple via
- *    expo-apple-authentication.
+ *  - `idToken` (+ `nonce`): an OpenID id_token from a native flow — Apple via
+ *    expo-apple-authentication, or Google via the native sign-in SDK.
  */
 export interface SocialLoginInput {
   provider: SocialProvider;
@@ -30,11 +35,17 @@ export interface SocialLoginInput {
   redirectUri?: string;
   idToken?: string;
   nonce?: string;
+  /**
+   * Profile hint some providers only reveal on the device: Apple hands the user's name to
+   * the CLIENT once, on first authorization — the id_token never carries it — so the BFF
+   * can only learn it if the authorizer forwards it here (used when creating the account).
+   */
+  name?: string;
 }
 
 /**
  * The credential an authorizer produces — everything in the BFF request except `provider`.
- * Browser/PKCE flows fill `code`; native flows (Apple) fill `idToken`. The client is shape-
+ * Browser/PKCE flows fill `code`; native flows fill `idToken`. The client is shape-
  * agnostic: it just forwards whatever the authorizer returns.
  */
 export type SocialCredential = Omit<SocialLoginInput, "provider">;
@@ -53,5 +64,5 @@ export type SocialAuthorizer = () => Promise<SocialCredential>;
  */
 export interface SocialClient {
   /** Authenticate with a provider; persists the session token on success. */
-  login(provider: SocialProvider): Promise<Session>;
+  login<T extends { token: string } = Session>(provider: SocialProvider): Promise<T>;
 }
