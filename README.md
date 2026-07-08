@@ -13,7 +13,7 @@ The **social-login** domain of the Tree Combinator SDK client (React Native / Ex
 ## Install
 
 ```bash
-npm install github:treecombinator/sdk-client-social
+givo add @treecombinator/sdk-client-social
 ```
 
 ## Use
